@@ -207,13 +207,14 @@ class LinearRegressionModel_TF(object):
         # - The gradient db (eq. dw) must have the same shape as b (eq. w) 
         #-----------------------------------------------------------------------
         
-        #f = lambda t, y: 1/(2*x.shape[0])*tf.sum((predict(self, x) - t)**2)
-        y=self.predict(x)
-        y_minus_t = y - t
-        dw = tf.math.reduce_sum(tf.linalg.matmul(tf.transpose(y_minus_t),x), axis=0, keepdims=True)
-        db = tf.math.reduce_sum(y_minus_t, axis=0, keepdims=True)
-        #dw=derivative(f, x)
-        #db=derivative(f, x)
+
+        with tf.GradientTape() as tape:
+            loss = LinearRegressionModel.get_loss(self, x, t)   # Use function get_loss
+
+        # Gradient computation:
+        dw = tape.gradient(loss, self.w)
+        db = tape.gradient(loss, self.b)
+        
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -227,6 +228,8 @@ class LinearRegressionModel_TF(object):
         # TO-DO block: Update the model parameters b and w
         #-----------------------------------------------------------------------
         pass
+        self.w = self.w - (dw*eta)
+        self.b = self.b - (db*eta)
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -242,7 +245,6 @@ class LinearRegressionModel_TF(object):
         y = self.predict(x)
         loss = tf.reduce_mean(0.5*(y - t)*(y - t))
         return loss
-
 
 #===============================================================================
 # Exercise 6. Implementation of a neural network with Numpy
