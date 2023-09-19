@@ -27,7 +27,7 @@ class LinearRegressionModel(object):
         #   (number of features)
         # - y must be a Nx1 array
         #-----------------------------------------------------------------------
-        pass
+        y = np.dot(x, self.w) + self.b
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -47,7 +47,14 @@ class LinearRegressionModel(object):
         # - y is a Nx1 array
         # - The gradient db (eq. dw) must have the same shape as b (eq. w) 
         #-----------------------------------------------------------------------
-        pass
+
+        y_minus_t = y - t
+
+        dw = np.matrix(np.sum((np.multiply(y_minus_t, x)), axis=0)).T
+        db = np.matrix(np.sum(y_minus_t))
+
+        dw /= x.shape[0]
+        db /= x.shape[0]
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -60,7 +67,8 @@ class LinearRegressionModel(object):
         #-----------------------------------------------------------------------
         # TO-DO block: Update the model parameters b and w
         #-----------------------------------------------------------------------
-        pass
+        self.w = self.w - eta * dw
+        self.b = self.b - eta * db
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -91,11 +99,22 @@ class LogisticRegressionModel(LinearRegressionModel):
     #---------------------------------------------------------------------------
     # TO-DO block: Overwrite the methods of the LinearRegressionModel class
     #---------------------------------------------------------------------------
-    pass
-    #---------------------------------------------------------------------------
-    # End of TO-DO block 
-    #---------------------------------------------------------------------------
     
+    def predict(self, x):
+        #-----------------------------------------------------------------------
+        # TO-DO block: Compute the model output y
+        # Note that:
+        # - x is a Nxd array, with N the number of patterns and d the dimension
+        #   (number of features)
+        # - y must be a Nx1 array
+        #-----------------------------------------------------------------------
+        y = self.sigmoid(np.dot(self.w, x.T) + self.b)
+        #-----------------------------------------------------------------------
+        # End of TO-DO block 
+        #-----------------------------------------------------------------------
+
+        return y
+        
     def get_loss(self, x, t):
         y = self.predict(x)
         loss = -np.mean(t*np.log(y) + (1.-t)*np.log(1.-y))
@@ -112,13 +131,19 @@ def derivative(f, x):
   # TO-DO block: Define the computational graph within a gradient tape and
   # compute the gradient
   #-----------------------------------------------------------------------------
-  pass
+  
+  # Define the graph wihtin a gradient tape:
+  with tf.GradientTape() as tape:
+    y = f(x) # Note that a is interpreted as a contant tensor
+
+  # Gradient computation:
+  dy_dx = tape.gradient(y, x)
+
   #-----------------------------------------------------------------------------
   # End of TO-DO block
   #-----------------------------------------------------------------------------
 
   return dy_dx
-
 
 #===============================================================================
 # Exercise 4. Gradient descent to find the minimum of a function
@@ -136,7 +161,7 @@ def gradient_descent(f, x0, learning_rate, niters):
         # TO-DO block: Define the computational graph within a gradient tape and 
         # compute the gradient
         #-----------------------------------------------------------------------------
-        pass
+        gradient=derivative(f, x)
         #-----------------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------------
@@ -144,7 +169,7 @@ def gradient_descent(f, x0, learning_rate, niters):
         #-----------------------------------------------------------------------------
         # TO-DO block: Update the value of x using the tf.Variable assign method
         #-----------------------------------------------------------------------------
-        pass
+        x=x-learning_rate*gradient
         #-----------------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------------
@@ -173,7 +198,7 @@ class LinearRegressionModel_TF(object):
         #   (number of features)
         # - y must be a Nx1 tensor
         #-----------------------------------------------------------------------
-        pass
+        y = tf.linalg.matmul(x,self.w)+self.b
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -191,7 +216,14 @@ class LinearRegressionModel_TF(object):
         # - y is a Nx1 tensor
         # - The gradient db (eq. dw) must have the same shape as b (eq. w) 
         #-----------------------------------------------------------------------
-        pass
+        
+        #f = lambda t, y: 1/(2*x.shape[0])*tf.sum((predict(self, x) - t)**2)
+        y=self.predict(x)
+        y_minus_t = y - t
+        dw = tf.math.reduce_sum(tf.linalg.matmul(tf.transpose(y_minus_t),x), axis=0, keepdims=True)
+        db = tf.math.reduce_sum(y_minus_t, axis=0, keepdims=True)
+        #dw=derivative(f, x)
+        #db=derivative(f, x)
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
