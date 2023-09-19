@@ -47,12 +47,13 @@ class LinearRegressionModel(object):
         # - y is a Nx1 array
         # - The gradient db (eq. dw) must have the same shape as b (eq. w) 
         #-----------------------------------------------------------------------
-
-        N = x.shape[0]
         y_minus_t = y - t
 
-        dw = np.matrix(np.mean((np.multiply(y_minus_t, x)), axis=0)).T
-        db = np.matrix(np.mean(y_minus_t))
+        g_w = np.mean((np.multiply(y_minus_t, x)), axis=0)
+        g_b = np.mean(y_minus_t)
+
+        dw = np.array([g_w]).T
+        db = np.array([[g_b]])
 
         #-----------------------------------------------------------------------
         # End of TO-DO block 
@@ -100,18 +101,8 @@ class LogisticRegressionModel(LinearRegressionModel):
     #---------------------------------------------------------------------------
     
     def predict(self, x):
-        #-----------------------------------------------------------------------
-        # TO-DO block: Compute the model output y
-        # Note that:
-        # - x is a Nxd array, with N the number of patterns and d the dimension
-        #   (number of features)
-        # - y must be a Nx1 array
-        #-----------------------------------------------------------------------
-        y = self.sigmoid(np.dot(x, self.w) + self.b)
-        #-----------------------------------------------------------------------
-        # End of TO-DO block 
-        #-----------------------------------------------------------------------
-
+        z = np.dot(x, self.w) + self.b
+        y = LogisticRegressionModel.sigmoid(z)
         return y
         
     def get_loss(self, x, t):
