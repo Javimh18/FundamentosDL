@@ -2,8 +2,8 @@
 # DLFBT 2023/2024
 # Lab assignment 1
 # Authors:
-#   Name1 NIA1
-#   Name2 NIA2
+#   Name1 Manuel Otero González
+#   Name2 Javier Muñoz Haro
 #===============================================================================
 
 import numpy as np
@@ -48,13 +48,12 @@ class LinearRegressionModel(object):
         # - The gradient db (eq. dw) must have the same shape as b (eq. w) 
         #-----------------------------------------------------------------------
 
+        N = x.shape[0]
         y_minus_t = y - t
 
-        dw = np.matrix(np.sum((np.multiply(y_minus_t, x)), axis=0)).T
-        db = np.matrix(np.sum(y_minus_t))
+        dw = np.matrix(np.mean((np.multiply(y_minus_t, x)), axis=0)).T
+        db = np.matrix(np.mean(y_minus_t))
 
-        dw /= x.shape[0]
-        db /= x.shape[0]
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -108,7 +107,7 @@ class LogisticRegressionModel(LinearRegressionModel):
         #   (number of features)
         # - y must be a Nx1 array
         #-----------------------------------------------------------------------
-        y = self.sigmoid(np.dot(self.w, x.T) + self.b)
+        y = self.sigmoid(np.dot(x, self.w) + self.b)
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
