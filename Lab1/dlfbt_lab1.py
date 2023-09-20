@@ -209,11 +209,11 @@ class LinearRegressionModel_TF(object):
         
 
         with tf.GradientTape() as tape:
-            loss = LinearRegressionModel.get_loss(self, x, t)   # Use function get_loss
+            loss = LinearRegressionModel_TF.get_loss(self, x, t)   # Use function get_loss
 
         # Gradient computation:
-        dw = tape.gradient(loss, self.w)
-        db = tape.gradient(loss, self.b)
+        db, dw = tape.gradient(loss, [self.b, self.w])
+        #db = tape.gradient(loss, self.b)
         
         #-----------------------------------------------------------------------
         # End of TO-DO block 
@@ -228,8 +228,9 @@ class LinearRegressionModel_TF(object):
         # TO-DO block: Update the model parameters b and w
         #-----------------------------------------------------------------------
         pass
-        self.w = self.w - (dw*eta)
-        self.b = self.b - (db*eta)
+        self.b = self.b - db * eta
+        self.w = self.w - dw * eta
+        
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
