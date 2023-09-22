@@ -350,7 +350,25 @@ class NeuralNetwork(object):
         # TO-DO block: loop in the network layers computing both the pre-
         # activation and the activation and appending them to lists z and y.
         #-----------------------------------------------------------------------
-        pass
+
+        # loop through the layers
+        flag = True
+        for i in range(self.nlayers):
+            w = self.W[i]
+            b = self.b[i]
+            a = self.a[i]
+
+            if flag:
+                flag = False
+                z_cur = np.dot(w, x) + b
+                y_cur = a(z_cur)
+            else:
+                z_cur = np.dot(w, y[-1]) + b
+                y_cur = a(z_cur)
+            
+            z.append(z_cur)
+            y.append(y_cur)
+            
 
         #-----------------------------------------------------------------------
         # End of TO-DO block
