@@ -188,9 +188,7 @@ class LinearRegressionModel_TF(object):
         #   (number of features)
         # - y must be a Nx1 tensor
         #-----------------------------------------------------------------------
-        
         y = tf.linalg.matmul(x,self.w)+self.b
-        
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -208,6 +206,7 @@ class LinearRegressionModel_TF(object):
         # - y is a Nx1 tensor
         # - The gradient db (eq. dw) must have the same shape as b (eq. w) 
         #-----------------------------------------------------------------------
+        
 
         with tf.GradientTape() as tape:
             loss = LinearRegressionModel_TF.get_loss(self, x, t)   # Use function get_loss
@@ -228,10 +227,12 @@ class LinearRegressionModel_TF(object):
         #-----------------------------------------------------------------------
         # TO-DO block: Update the model parameters b and w
         #-----------------------------------------------------------------------
-
+        pass
+        #self.b = self.b - db * eta
+        #self.w = self.w - dw * eta
+        
         self.b = tf.Variable(self.b - eta*db)
         self.w = tf.Variable(self.w - eta*dw)
-        
         #-----------------------------------------------------------------------
         # End of TO-DO block 
         #-----------------------------------------------------------------------
@@ -527,7 +528,23 @@ class NeuralNetwork_TF(object):
         # The activation of the last layer should be stored at variable y to
         # be returned.
         #-----------------------------------------------------------------------
-        pass
+        capas=len(self.W)   # número de capas de la red
+        y=[]
+
+        for i in range(capas):  # bucle para recorrer todas las capas
+
+            if i==0:    # capa entrada
+                z = tf.linalg.matmul(self.W[i], x) + self.b[i]
+
+            elif i!=0:  # resto de capas
+                z = tf.linalg.matmul(self.W[i], y[i-1]) + self.b[i]
+            
+            y.append(self.a[i](z))
+            
+        y=y[-1][-1]
+        y=tf.convert_to_tensor(y)
+        y=tf.expand_dims(y, axis=0)
+
         #-----------------------------------------------------------------------
         # End of TO-DO block
         #-----------------------------------------------------------------------
@@ -555,7 +572,13 @@ class NeuralNetwork_TF(object):
         #-----------------------------------------------------------------------
         # TO-DO block: compute the gradients db, dW
         #-----------------------------------------------------------------------
-        pass
+        
+        with tf.GradientTape() as tape:
+            loss = LinearRegressionModel_TF.get_loss(self, x, t)   # Use function get_loss
+
+        # Gradient computation:
+        db, dW = tape.gradient(loss, [self.b, self.W])
+
         #-----------------------------------------------------------------------
         # End of TO-DO block
         #-----------------------------------------------------------------------
@@ -566,12 +589,18 @@ class NeuralNetwork_TF(object):
     # Gradient step:
     #---------------------------------------------------------------------------
     def gradient_step(self, x, t, eta, loss_function):
-        dB, dW = self.compute_gradients(x, t, loss_function)
+        db, dW = self.compute_gradients(x, t, loss_function)
 
         #-----------------------------------------------------------------------
         # TO-DO block: Loop in layers updating the model parameters b and w
         #-----------------------------------------------------------------------
-        pass
+        
+        capas=len(self.W)   # número de capas de la red
+
+        for i in range(capas):  # bucle para recorrer todas las capas
+            self.b[i] = tf.Variable(self.b[i] - eta*db[i])
+            self.W[i] = tf.Variable(self.W[i] - eta*dW[i])
+
         #-----------------------------------------------------------------------
         # End of TO-DO block
         #-----------------------------------------------------------------------
