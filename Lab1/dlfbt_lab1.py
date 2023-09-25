@@ -418,18 +418,21 @@ class NeuralNetwork(object):
         
         deltas = []
         for i in reversed(range(self.nlayers)):
-            if i == self.nlayers - 1: # case of the last layer, where dy is obtained as the error of the prediction
-                deltaK = np.multiply(dy, self.da[i](z[i]))
-                deltas.append(deltaK)
-                db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
-                dW_cur = np.dot(deltas[-1], y[i-1].T)
-            elif i == 0: # case of the first layer, where instead of the input of the previous layer (preactivation), we get the input
-                deltaK = np.dot(self.W[i+1].T, deltas[-1]) * self.da[i](z[i])
+            if i == 0: # case of the first layer, where instead of the input of the previous layer (preactivation), we get the input
+                if(self.nlayers == 1):
+                    deltaK = np.multiply(dy, self.da[i](z[i]))
+                else:
+                    deltaK = np.multiply(np.dot(self.W[i+1].T, deltas[-1]), self.da[i](z[i]))
                 deltas.append(deltaK)
                 db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
                 dW_cur = np.dot(deltas[-1], x.T)
+            elif i == self.nlayers - 1: # case of the last layer, where dy is obtained as the error of the prediction
+                deltaK = np.multiply(dy, self.da[i](z[i]))
+                deltas.append(deltaK)
+                db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
+                dW_cur = np.dot(deltas[-1], y[i-1].T)      
             else: # case of the middle layers
-                deltaK = np.dot(self.W[i+1].T, deltas[-1]) * self.da[i](z[i])
+                deltaK = np.multiply(np.dot(self.W[i+1].T, deltas[-1]), self.da[i](z[i]))
                 deltas.append(deltaK)
                 db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
                 dW_cur = np.dot(deltas[-1], y[i-1].T)
@@ -437,14 +440,15 @@ class NeuralNetwork(object):
             dW.append(dW_cur)
             db.append(db_cur)
 
+
+        dW = list(reversed(dW))
+        db = list(reversed(db))
+
         #-----------------------------------------------------------------------
         # End of TO-DO block
         #-----------------------------------------------------------------------
 
-        dW = reversed(dW)
-        db = reversed(db)
-
-        return list(dW), list(db)
+        return dW, db
 
     #---------------------------------------------------------------------------
     # Gradient step:
@@ -456,8 +460,8 @@ class NeuralNetwork(object):
         # TO-DO block: Loop in layers updating the model parameters b and w
         #-----------------------------------------------------------------------
         for i in range(self.nlayers):
-            self.W[i] = self.W[i] - eta * dW[i]
-            self.b[i] = self.b[i] - eta * db[i]
+            self.W[i] -= eta * dW[i]
+            self.b[i] -= eta * db[i]
         #-----------------------------------------------------------------------
         # End of TO-DO block
         #-----------------------------------------------------------------------
