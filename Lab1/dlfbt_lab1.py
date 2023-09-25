@@ -416,20 +416,24 @@ class NeuralNetwork(object):
         # it may be useful to traverse the lists backwards.
         #-----------------------------------------------------------------------
         
+        deltas = []
         for i in reversed(range(self.nlayers)):
             if i == self.nlayers - 1: # case of the last layer, where dy is obtained as the error of the prediction
-                dz = np.dot(dy, self.da[i](z[i]).T)
-                db_cur = dz
-                dW_cur = np.array([np.dot(y[i-1], dz)])
-                print(dz, dW_cur)
+                deltaK = np.multiply(dy, self.da[i](z[i]))
+                deltas.append(deltaK)
+                db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
+                dW_cur = np.dot(deltas[-1], y[i-1].T)
             elif i == 0: # case of the first layer, where instead of the input of the previous layer (preactivation), we get the input
-                dz = np.multiply(dz, self.da[i](z[i]))
-                db_cur = np.mean(dz, axis=1)
-                dW_cur = np.mean(np.multiply(x,dz), axis=1)
+                deltaK = np.dot(self.W[i+1].T, deltas[-1]) * self.da[i](z[i])
+                deltas.append(deltaK)
+                db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
+                dW_cur = np.dot(deltas[-1], x.T)
             else: # case of the middle layers
-                dz = np.multiply(dz, self.da[i](z[i]))
-                db_cur = np.mean(dz, axis=1)
-                dW_cur = np.mean(np.multiply(y[i-1], dz), axis=1)
+                deltaK = np.dot(self.W[i+1].T, deltas[-1]) * self.da[i](z[i])
+                deltas.append(deltaK)
+                db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
+                dW_cur = np.dot(deltas[-1], y[i-1].T)
+            
             dW.append(dW_cur)
             db.append(db_cur)
 
@@ -452,8 +456,8 @@ class NeuralNetwork(object):
         # TO-DO block: Loop in layers updating the model parameters b and w
         #-----------------------------------------------------------------------
         for i in range(self.nlayers):
-            self.w = self.W[i] - eta * dW[i]
-            self.b = self.b[i] - eta * db[i]
+            self.W[i] = self.W[i] - eta * dW[i]
+            self.b[i] = self.b[i] - eta * db[i]
         #-----------------------------------------------------------------------
         # End of TO-DO block
         #-----------------------------------------------------------------------
