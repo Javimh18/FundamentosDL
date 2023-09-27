@@ -49,6 +49,7 @@ class LinearRegressionModel(object):
         #-----------------------------------------------------------------------
         y_minus_t = y - t
 
+        # computing the gradients, based on the derivatives with respect each w,b
         g_w = np.mean((np.multiply(y_minus_t, x)), axis=0)
         g_b = np.mean(y_minus_t)
 
@@ -358,12 +359,15 @@ class NeuralNetwork(object):
             w = self.W[i]
             b = self.b[i]
             a = self.a[i]
-
+            
+            # for the first layer, we multiply the weights by the inputs
             if flag:
                 flag = False
                 z_cur = np.dot(w, x) + b
                 y_cur = a(z_cur)
-            else:
+            else: 
+                # for the rest of the layers, the outputs will be the product of the 
+                # weigths by the activations of the previous layer
                 z_cur = np.dot(w, y[-1]) + b
                 y_cur = a(z_cur)
             
@@ -418,20 +422,29 @@ class NeuralNetwork(object):
         
         deltas = []
         for i in reversed(range(self.nlayers)):
-            if i == 0: # case of the first layer, where instead of the input of the previous layer (preactivation), we get the input
-                if(self.nlayers == 1):
+            if i == 0: 
+                # case of the first layer, where instead of the input of the previous 
+                # layer (preactivation), we get the input
+                if(self.nlayers == 1): 
+                    # If the NN has just one layer, the first layer will be the last too, 
+                    # so we propagate the error respect to dy.
                     deltaK = np.multiply(dy, self.da[i](z[i]))
                 else:
+                    # If it is really the first layer, then we compute the delta as the product of
+                    # the weight of the previous layer by the delta that accumulates the value
+                    # of the chain rule for each layer where the error propagates.
                     deltaK = np.multiply(np.dot(self.W[i+1].T, deltas[-1]), self.da[i](z[i]))
                 deltas.append(deltaK)
                 db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
                 dW_cur = np.dot(deltas[-1], x.T)
-            elif i == self.nlayers - 1: # case of the last layer, where dy is obtained as the error of the prediction
+            elif i == self.nlayers - 1: 
+                # case of the last layer, where dy is obtained as the error of the prediction.
                 deltaK = np.multiply(dy, self.da[i](z[i]))
                 deltas.append(deltaK)
                 db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
                 dW_cur = np.dot(deltas[-1], y[i-1].T)      
-            else: # case of the middle layers
+            else: 
+                # case of the hidden layers.
                 deltaK = np.multiply(np.dot(self.W[i+1].T, deltas[-1]), self.da[i](z[i]))
                 deltas.append(deltaK)
                 db_cur = np.sum(deltas[-1], axis=1, keepdims=True)
@@ -558,15 +571,15 @@ class NeuralNetwork_TF(object):
         # The activation of the last layer should be stored at variable y to
         # be returned.
         #-----------------------------------------------------------------------
-        capas=len(self.W)   # número de capas de la red
+        capas=len(self.W)   # number of layers in the neural network
         y=[]
 
-        for i in range(capas):  # bucle para recorrer todas las capas
+        for i in range(capas):  # loop to iterate through the layers
 
-            if i==0:    # capa entrada
+            if i==0:    # input layer
                 z = tf.linalg.matmul(self.W[i], x) + self.b[i]
 
-            elif i!=0:  # resto de capas
+            elif i!=0:  # the rest of the layers
                 z = tf.linalg.matmul(self.W[i], y[i-1]) + self.b[i]
             
             y.append(self.a[i](z))
@@ -625,9 +638,9 @@ class NeuralNetwork_TF(object):
         # TO-DO block: Loop in layers updating the model parameters b and w
         #-----------------------------------------------------------------------
         
-        capas=len(self.W)   # número de capas de la red
+        capas=len(self.W)   # number of layers in the neural network
 
-        for i in range(capas):  # bucle para recorrer todas las capas
+        for i in range(capas):  # looping through the layers
             self.b[i] = tf.Variable(self.b[i] - eta*db[i])
             self.W[i] = tf.Variable(self.W[i] - eta*dW[i])
 
@@ -656,7 +669,7 @@ class NeuralNetwork_TF(object):
                 batch_t = t[:, ibatch]
                 self.gradient_step(batch_x, batch_t, eta, loss_function)
 
-            # Calculo el loss de la epoca con todos los datos:
+            # With all the data gathered, we compute the loss for the current epoch:
             loss[i] = self.get_loss(x, t, loss_function).numpy()
         return loss
 
