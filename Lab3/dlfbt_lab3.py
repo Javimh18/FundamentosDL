@@ -155,19 +155,6 @@ class LinearRegressionModel_pytorch(object):
 #        should be well documented.
 #-----------------------------------------------------------------------
 
-class TransformDataset(Dataset):
-  def __init__(self, base_dataset, transformations):
-    super(TransformDataset, self).__init__()
-    self.base = base_dataset
-    self.transformations = transformations
-
-  def __len__(self):
-    return len(self.base)
-
-  def __getitem__(self, idx):
-    x, y = self.base[idx]
-    return self.transformations(x), y
-
 class CNN_model(torch.nn.Module):
     def __init__(self):
         super().__init__()
@@ -191,13 +178,6 @@ class CNN_model(torch.nn.Module):
             nn.Softmax(dim=1)
         )
 
-    def init_weights(m):
-        if isinstance(m, nn.Linear):
-            torch.nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
-            m.bias.data.fill_(0.01)
-        elif isinstance(m,nn.Conv2d):
-            torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
-
     def forward(self, x):
         x = self.batch_norm1(self.pool(F.relu(self.conv1(x))))
         x = self.dropout(x)
@@ -208,6 +188,26 @@ class CNN_model(torch.nn.Module):
         x = torch.flatten(x, 1) # flatten all dimensions except batch
         x = self.classifier(x)
         return x
+    
+    def init_weights(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
+            m.bias.data.fill_(0.01)
+        elif isinstance(m,nn.Conv2d):
+            torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
+
+class TransformDataset(Dataset):
+  def __init__(self, base_dataset, transformations):
+    super(TransformDataset, self).__init__()
+    self.base = base_dataset
+    self.transformations = transformations
+
+  def __len__(self):
+    return len(self.base)
+
+  def __getitem__(self, idx):
+    x, y = self.base[idx]
+    return self.transformations(x), y
     
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
@@ -367,51 +367,51 @@ def test_step(model: torch.nn.Module,
               dataloader: torch.utils.data.DataLoader, 
               loss_fn: torch.nn.Module,
               device: torch.device):
-  """Tests a PyTorch model for a single epoch.
+    """Tests a PyTorch model for a single epoch.
 
-  Turns a target PyTorch model to "eval" mode and then performs
-  a forward pass on a testing dataset.
+    Turns a target PyTorch model to "eval" mode and then performs
+    a forward pass on a testing dataset.
 
-  Args:
+    Args:
     model: A PyTorch model to be tested.
     dataloader: A DataLoader instance for the model to be tested on.
     loss_fn: A PyTorch loss function to calculate loss on the test data.
     device: A target device to compute on (e.g. "cuda" or "cpu").
 
-  Returns:
+    Returns:
     A tuple of testing loss and testing accuracy metrics.
     In the form (test_loss, test_accuracy). For example:
 
     (0.0223, 0.8985)
-  """
-  # Put model in eval mode
-  model.eval() 
+    """
+    # Put model in eval mode
+    model.eval() 
 
-  # Setup test loss and test accuracy values
-  test_loss, test_acc = 0, 0
+    # Setup test loss and test accuracy values
+    test_loss, test_acc = 0, 0
 
-  # Turn on inference context manager
-  with torch.inference_mode():
-      # Loop through DataLoader batches
-      for batch, (X, y) in enumerate(dataloader):
-          # Send data to target device
-          X, y = X.to(device), y.to(device)
+    # Turn on inference context manager
+    with torch.inference_mode():
+        # Loop through DataLoader batches
+        for batch, (X, y) in enumerate(dataloader):
+            # Send data to target device
+            X, y = X.to(device), y.to(device)
 
-          # 1. Forward pass
-          test_pred_logits = model(X)
+            # 1. Forward pass
+            test_pred_logits = model(X)
 
-          # 2. Calculate and accumulate loss
-          loss = loss_fn(test_pred_logits, y)
-          test_loss += loss.item()
+            # 2. Calculate and accumulate loss
+            loss = loss_fn(test_pred_logits, y)
+            test_loss += loss.item()
 
-          # Calculate and accumulate accuracy
-          test_pred_labels = test_pred_logits.argmax(dim=1)
-          test_acc += ((test_pred_labels == y).sum().item()/len(test_pred_labels))
+            # Calculate and accumulate accuracy
+            test_pred_labels = test_pred_logits.argmax(dim=1)
+            test_acc += ((test_pred_labels == y).sum().item()/len(test_pred_labels))
 
-  # Adjust metrics to get average loss and accuracy per batch 
-  test_loss = test_loss / len(dataloader)
-  test_acc = test_acc / len(dataloader)
-  return test_loss, test_acc
+    # Adjust metrics to get average loss and accuracy per batch 
+    test_loss = test_loss / len(dataloader)
+    test_acc = test_acc / len(dataloader)
+    return test_loss, test_acc
 
 def plot_metrics(history:dict, n_epochs:int):
     # plotting training statistics
