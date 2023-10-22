@@ -270,10 +270,10 @@ def train(dataloader,
     optimizer: function that optimizes the learning of the model
     device: A target device to compute on (e.g. "cuda" or "cpu").
     n_epochs: number of epochs for the model to be trained
-    print_inverval: 
+    print_inverval: interval for printing the metrics
 
     Returns:
-    A dictionary with history arrays for training loss and training accuracy metrics.
+    A dictionary with history arrays for loss and accuracy in both training and validation sets.
     """
     
     history_train_loss = [] 
@@ -355,7 +355,9 @@ def train(dataloader,
             print(f"Epoch: {epoch + 1} | \n\t Train Loss: {train_loss:.3} | Train Accuracy: {train_acc:.3}\
                                          \n\t Val Loss: {val_loss:.3} | Val Accuracy: {val_acc:.3}")
 
-    # metrics dumping
+    #####################################################################################
+    ################################# METRICS DUMP ######################################
+    #####################################################################################
     history['train_accuracy'] = history_train_acc
     history['train_loss'] = history_train_loss
     history['val_accuracy'] = history_val_acc
@@ -393,7 +395,7 @@ def test_step(model: torch.nn.Module,
     # Turn on inference context manager
     with torch.inference_mode():
         # Loop through DataLoader batches
-        for batch, (X, y) in enumerate(dataloader):
+        for _, (X, y) in enumerate(dataloader):
             # Send data to target device
             X, y = X.to(device), y.to(device)
 
