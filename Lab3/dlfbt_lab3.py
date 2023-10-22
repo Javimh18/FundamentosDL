@@ -197,17 +197,17 @@ class CNN_model(torch.nn.Module):
             torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
 
 class TransformDataset(Dataset):
-  def __init__(self, base_dataset, transformations):
-    super(TransformDataset, self).__init__()
-    self.base = base_dataset
-    self.transformations = transformations
+    def __init__(self, base_dataset, transformations):
+        super(TransformDataset, self).__init__()
+        self.base = base_dataset
+        self.transformations = transformations
 
-  def __len__(self):
-    return len(self.base)
+    def __len__(self):
+        return len(self.base)
 
-  def __getitem__(self, idx):
-    x, y = self.base[idx]
-    return self.transformations(x), y
+    def __getitem__(self, idx):
+        x, y = self.base[idx]
+        return self.transformations(x), y
     
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
