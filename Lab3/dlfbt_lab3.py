@@ -12,6 +12,11 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
+from torch.utils.data import Dataset
+import torchvision.transforms as transforms
+import os
+from sklearn.model_selection import train_test_split
+import torchvision
 
 #===============================================================================
 # Exercise 1. Gradient descent to find the minimum of a function
@@ -150,39 +155,102 @@ class LinearRegressionModel_pytorch(object):
 #        should be well documented.
 #-----------------------------------------------------------------------
 
-def init_weights(m):
-    if isinstance(m, nn.Linear):
-        torch.nn.init.xavier_uniform_(m.weight)
-        m.bias.data.fill_(0.01)
+class TransformDataset(Dataset):
+  def __init__(self, base_dataset, transformations):
+    super(TransformDataset, self).__init__()
+    self.base = base_dataset
+    self.transformations = transformations
+
+  def __len__(self):
+    return len(self.base)
+
+  def __getitem__(self, idx):
+    x, y = self.base[idx]
+    return self.transformations(x), y
 
 class CNN_model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 16, 3)
+        self.conv1 = nn.Conv2d(3, 16, 3, padding='same')
         self.pool = nn.MaxPool2d(2, 2)
-        self.conv2 = nn.Conv2d(16, 32, 4)
-        self.conv3 = nn.Conv2d(32, 64, 3)
-        self.fc1 = nn.Linear(64 * 2 * 2, 120)
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
-         # Using Xavier initilization
-        # self.comp_block.apply(init_weights)
+        self.dropout = nn.Dropout2d(.15)
+        self.batch_norm1 = nn.BatchNorm2d(16)
+        self.conv2 = nn.Conv2d(16, 32, 3, padding='same')
+        self.batch_norm2 = nn.BatchNorm2d(32)
+        self.conv3 = nn.Conv2d(32, 64, 3, padding='same')
+        self.batch_norm3 = nn.BatchNorm2d(64)
+        self.classifier = nn.Sequential(
+            nn.Dropout(.5),
+            nn.Linear(64 * 4 * 4, 256),
+            nn.ReLU(),
+            nn.Dropout(.5),
+            nn.Linear(256, 64),
+            nn.ReLU(),
+            nn.Dropout(.5),
+            nn.Linear(64, 10),
+            nn.Softmax(dim=1)
+        )
+
+    def init_weights(m):
+        if isinstance(m, nn.Linear):
+            torch.nn.init.xavier_uniform_(m.weight, gain=nn.init.calculate_gain('relu'))
+            m.bias.data.fill_(0.01)
+        elif isinstance(m,nn.Conv2d):
+            torch.nn.init.kaiming_uniform_(m.weight, mode='fan_in', nonlinearity='relu')
 
     def forward(self, x):
-        x = self.pool(F.relu(self.conv1(x)))
-        x = self.pool(F.relu(self.conv2(x)))
-        x = self.pool(F.relu(self.conv3(x)))
+        x = self.batch_norm1(self.pool(F.relu(self.conv1(x))))
+        x = self.dropout(x)
+        x = self.batch_norm2(self.pool(F.relu(self.conv2(x))))
+        x = self.dropout(x)
+        x = self.batch_norm3(self.pool(F.relu(self.conv3(x))))
+        x = self.dropout(x)
         x = torch.flatten(x, 1) # flatten all dimensions except batch
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.softmax(self.fc3(x), dim=1)
+        x = self.classifier(x)
         return x
     
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
     return (y_pred.round() == y_true).float().mean()
 
+def prepare_dataset(batch_size=8, data_aug_transform=None, validation_set=True):
+    # we use transforms in order to cast from PIL to Tensor datatype and normalize our pixel values in order for them to be in the [-1,1] interval
+    transform = transforms.Compose([
+                                    transforms.ToTensor(),
+                                    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+
+    # downloading CIFAR Dataset for training
+    train_data = torchvision.datasets.CIFAR10(root='./data', train=True,download=True, 
+                                            transform=transform)
+    
+    # downloading CIFAR Dataset for testing
+    test_data = torchvision.datasets.CIFAR10(root='./data', train=False,
+                                        download=True, transform=transform)
+
+    # splitting into train and validation
+    if validation_set:
+        train_data, valid_data = train_test_split(train_data, test_size=.2)
+
+    # applying transformations only to the train data using TransformDataset custom class
+    if data_aug_transform != None:
+        train_data = TransformDataset(train_data, data_aug_transform)
+
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size,
+                                            shuffle=True, num_workers=os.cpu_count())
+
+    val_loader = torch.utils.data.DataLoader(valid_data, batch_size=batch_size,
+                                            shuffle=True, num_workers=os.cpu_count())
+
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=batch_size,
+                                            shuffle=False, num_workers=os.cpu_count())
+    if not validation_set:
+        return train_loader, test_loader
+    
+    return train_loader, val_loader, test_loader
+
 def train(dataloader,
+          valid_dataloader,
           model,
           loss_fn, 
           optimizer,
@@ -208,9 +276,15 @@ def train(dataloader,
     A dictionary with history arrays for training loss and training accuracy metrics.
     """
     
-    history_loss = [] 
-    history_acc = []
+    history_train_loss = [] 
+    history_train_acc = []
+    history_val_loss = [] 
+    history_val_acc = []
     history = {}
+
+    #####################################################################################
+    ################################# TRAIN STEP ########################################
+    #####################################################################################
 
     for epoch in range(n_epochs):
         train_loss = 0.0
@@ -222,7 +296,7 @@ def train(dataloader,
 
             # get metrics for loss
             loss = loss_fn(y_pred, y.long())
-            train_loss += loss
+            train_loss += loss.item()
 
             # get metrics for accuracy
             y_pred_class = torch.argmax(y_pred, dim=1)
@@ -236,17 +310,56 @@ def train(dataloader,
             # adjusting the necessary weigths of our models
             optimizer.step()
 
-        epoch_loss = train_loss/len(dataloader)
-        epoch_acc = train_acc/len(dataloader)
+        train_loss = train_loss/len(dataloader)
+        train_acc = train_acc/len(dataloader)
 
+        history_train_loss.append(train_loss)
+        history_train_acc.append(train_acc.item())
+
+    #####################################################################################
+    ############################### VALIDATION STEP #####################################
+    #####################################################################################
+
+        model.eval()
+
+        # Setup test loss and test accuracy values
+        val_loss, val_acc = 0, 0
+
+        # Turn on inference context manager
+        with torch.inference_mode():
+            # Loop through DataLoader batches
+            for _, (X, y) in enumerate(valid_dataloader):
+                # Send data to target device
+                X, y = X.to(device), y.to(device)
+
+                # 1. Forward pass
+                val_pred = model(X)
+
+                # 2. Calculate and accumulate loss
+                loss = loss_fn(val_pred, y)
+                val_loss += loss.item()
+
+                # Calculate and accumulate accuracy
+                val_pred_labels = val_pred.argmax(dim=1)
+                val_acc += accuracy_fn(y,val_pred_labels)
+        
+        # Adjust metrics to get average loss and accuracy per batch 
+        val_loss = val_loss / len(valid_dataloader)
+        val_acc = val_acc / len(valid_dataloader)
+
+        history_val_loss.append(val_loss)
+        history_val_acc.append(val_acc.item())
+
+        # print metrics each print_interval epochs
         if (epoch + 1) % print_interval == 0:
-            print(f"Epoch: {epoch + 1} | Loss: {epoch_loss} | Accuracy: {epoch_acc}")
+            print(f"Epoch: {epoch + 1} | \n\t Train Loss: {train_loss:.3} | Train Accuracy: {train_acc:.3}\
+                                         \n\t Val Loss: {val_loss:.3} | Val Accuracy: {val_acc:.3}")
 
-        history_acc.append(epoch_acc.item())
-        history_loss.append(epoch_loss.item())
-
-        history['accuracy'] = history_acc
-        history['loss'] = history_loss
+    # metrics dumping
+    history['train_accuracy'] = history_train_acc
+    history['train_loss'] = history_train_loss
+    history['val_accuracy'] = history_val_acc
+    history['val_loss'] = history_val_loss
 
     return history
 
@@ -304,15 +417,19 @@ def plot_metrics(history:dict, n_epochs:int):
     # plotting training statistics
 
     plt.figure(figsize=(10,6))
-    plt.plot(history['accuracy'])
-    plt.title(f'Accuracy for our basic model. Training for {n_epochs}')
+    plt.plot(history['train_accuracy'], label='train_accuracy')
+    plt.plot(history['val_accuracy'], label='val_accuracy')
+    plt.title(f'Accuracy for our model. Training for {n_epochs}')
     plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
+    plt.legend()
     plt.show()
 
     plt.figure(figsize=(10,6))
-    plt.plot(history['loss'])
-    plt.title(f'Loss for our basic model. Training for {n_epochs}')
+    plt.plot(history['train_loss'], label='train_loss')
+    plt.plot(history['val_loss'], label='val_loss')
+    plt.title(f'Loss for our model. Training for {n_epochs}')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
+    plt.legend()
     plt.show()
