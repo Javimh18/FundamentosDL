@@ -158,23 +158,23 @@ class LinearRegressionModel_pytorch(object):
 class CNN_model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 16, 3, padding='same')
+        self.conv1 = nn.Conv2d(3, 32, 3, padding='same')
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout = nn.Dropout2d(.15)
-        self.batch_norm1 = nn.BatchNorm2d(16)
-        self.conv2 = nn.Conv2d(16, 32, 3, padding='same')
-        self.batch_norm2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 64, 3, padding='same')
-        self.batch_norm3 = nn.BatchNorm2d(64)
+        self.batch_norm1 = nn.BatchNorm2d(32)
+        self.conv2 = nn.Conv2d(32, 64, 3, padding='same')
+        self.batch_norm2 = nn.BatchNorm2d(64)
+        self.conv3 = nn.Conv2d(64, 128, 3, padding='same')
+        self.batch_norm3 = nn.BatchNorm2d(128)
         self.classifier = nn.Sequential(
             nn.Dropout(.5),
-            nn.Linear(64 * 4 * 4, 256),
+            nn.Linear(128 * 4 * 4, 128),
             nn.ReLU(),
             nn.Dropout(.5),
-            nn.Linear(256, 64),
+            nn.Linear(128, 84),
             nn.ReLU(),
             nn.Dropout(.5),
-            nn.Linear(64, 10),
+            nn.Linear(84, 10),
             nn.Softmax(dim=1)
         )
 
@@ -352,8 +352,8 @@ def train(dataloader,
 
         # print metrics each print_interval epochs
         if (epoch + 1) % print_interval == 0:
-            print(f"Epoch: {epoch + 1} | \n\t Train Loss: {train_loss:.3} | Train Accuracy: {train_acc:.3}\
-                                         \n\t Val Loss: {val_loss:.3} | Val Accuracy: {val_acc:.3}")
+            print(f"Epoch: {epoch + 1}:  \n\t| Train Loss: {train_loss:.3} | Train Accuracy: {train_acc:.3}\
+                                         \n\t| Val Loss: {val_loss:.3} | Val Accuracy: {val_acc:.3}")
 
     #####################################################################################
     ################################# METRICS DUMP ######################################
