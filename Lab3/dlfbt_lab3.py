@@ -158,13 +158,16 @@ class LinearRegressionModel_pytorch(object):
 class CNN_model(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(3, 32, 3, padding='same')
+        self.conv1_1 = nn.Conv2d(3, 32, 3, padding='same')
+        self.conv1_2 = nn.Conv2d(32, 32, 3, padding='same')
         self.pool = nn.MaxPool2d(2, 2)
         self.dropout = nn.Dropout2d(.15)
         self.batch_norm1 = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d(32, 64, 3, padding='same')
+        self.conv2_1 = nn.Conv2d(32, 64, 3, padding='same')
+        self.conv2_2 = nn.Conv2d(64, 64, 3, padding='same')
         self.batch_norm2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(64, 128, 3, padding='same')
+        self.conv3_1 = nn.Conv2d(64, 128, 3, padding='same')
+        self.conv3_2 = nn.Conv2d(128, 128, 3, padding='same')
         self.batch_norm3 = nn.BatchNorm2d(128)
         self.classifier = nn.Sequential(
             nn.Dropout(.5),
@@ -179,11 +182,14 @@ class CNN_model(torch.nn.Module):
         )
 
     def forward(self, x):
-        x = self.batch_norm1(self.pool(F.relu(self.conv1(x))))
+        x = self.batch_norm1(F.relu(self.conv1_1(x)))
+        x = self.batch_norm1(self.pool(F.relu(self.conv1_2(x))))
         x = self.dropout(x)
-        x = self.batch_norm2(self.pool(F.relu(self.conv2(x))))
+        x = self.batch_norm2(F.relu(self.conv2_1(x)))
+        x = self.batch_norm2(self.pool(F.relu(self.conv2_2(x))))
         x = self.dropout(x)
-        x = self.batch_norm3(self.pool(F.relu(self.conv3(x))))
+        x = self.batch_norm3(F.relu(self.conv3_1(x)))
+        x = self.batch_norm3(self.pool(F.relu(self.conv3_2(x))))
         x = self.dropout(x)
         x = torch.flatten(x, 1) # flatten all dimensions except batch
         x = self.classifier(x)
@@ -213,7 +219,7 @@ class TransformDataset(Dataset):
 def accuracy_fn(y_true, y_pred):
     return (y_pred.round() == y_true).float().mean()
 
-def prepare_dataset(batch_size=8, data_aug_transform=None, validation_set=True):
+def prepare_dataset(batch_size=8, data_aug_transform=None, validation_set=True, val_split=0.2):
     # we use transforms in order to cast from PIL to Tensor datatype and normalize our pixel values in order for them to be in the [-1,1] interval
     transform = transforms.Compose([
                                     transforms.ToTensor(),
@@ -230,7 +236,7 @@ def prepare_dataset(batch_size=8, data_aug_transform=None, validation_set=True):
 
     # splitting into train and validation
     if validation_set:
-        train_data, valid_data = train_test_split(train_data, test_size=.2)
+        train_data, valid_data = train_test_split(train_data, test_size=val_split)
 
     # applying transformations only to the train data using TransformDataset custom class
     if data_aug_transform != None:
