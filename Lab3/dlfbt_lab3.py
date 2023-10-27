@@ -217,9 +217,34 @@ class TransformDataset(Dataset):
     
 # Calculate accuracy (a classification metric)
 def accuracy_fn(y_true, y_pred):
+    """Computes the accuracy between the ground truth (y_true) and the prediction (y_pred)
+
+    Args:
+    y_true: tensor with all the ground truth values
+    y_pred: Predictions from the model
+
+    Returns:
+    The accuracy from the predictions.
+    """
     return (y_pred.round() == y_true).float().mean()
 
 def prepare_dataset(batch_size=8, data_aug_transform=None, validation_set=True, val_split=0.2):
+
+    """Prepares the CIFAR-10 dataset for a given batch size, and performing some specified transformations
+
+    This function returns the CIFAR-10 dataset, with the specific bach_size, data augmentation transformations
+    and validation set in order to training the model.
+
+    Args:
+    batch_size: Size of the batches the data will be splitted into.
+    data_aug_transform: A set of transformations applied to the dataset in order to perform data augmentation.
+    validation_set: Flag to split the training set into train and validation
+    val_split: Aplicable only if validation_set=True. Tells the split percentage of the validation dataset.
+
+    Returns:
+    The dataset with the different transformations indicated in the arguments.
+    """
+
     # we use transforms in order to cast from PIL to Tensor datatype and normalize our pixel values in order for them to be in the [-1,1] interval
     transform = transforms.Compose([
                                     transforms.ToTensor(),
@@ -264,10 +289,7 @@ def train(dataloader,
           n_epochs = 100,
           print_interval = 2):
     
-    """Tests a PyTorch model for a single epoch.
-
-    Turns a target PyTorch model to "eval" mode and then performs
-    a forward pass on a testing dataset.
+    """Trains a PyTorch model for a n_epochs epochs.
 
     Args:
     model: A PyTorch model to be tested.
@@ -328,7 +350,7 @@ def train(dataloader,
 
         model.eval()
 
-        # Setup test loss and test accuracy values
+        # Setup validation loss and validation accuracy values
         val_loss, val_acc = 0, 0
 
         # Turn on inference context manager
@@ -338,10 +360,10 @@ def train(dataloader,
                 # Send data to target device
                 X, y = X.to(device), y.to(device)
 
-                # 1. Forward pass
+                # Forward pass
                 val_pred = model(X)
 
-                # 2. Calculate and accumulate loss
+                # Calculate and accumulate loss
                 loss = loss_fn(val_pred, y)
                 val_loss += loss.item()
 
